@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>90's MACHINE - HEADS OR TAILS</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Fredoka:wght@500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      touch-action: none;
+    }
+
+    video.mindar-video {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: cover !important;
+      z-index: 0 !important;
+      display: block !important;
+      background: transparent !important;
+    }
+
+    canvas.mindar-canvas {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 1 !important;
+      display: block !important;
+      pointer-events: auto !important;
+    }
+
+    a-scene, .a-canvas {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 2 !important;
+      display: block !important;
+      background: transparent !important;
+      pointer-events: auto !important;
+    }
+
+    .a-enter-vr, .a-enter-ar, .a-orientation-modal, .a-loader-title {
+      display: none !important;
+    }
+
+    #entry-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      background: #f2e6c9;
+    }
+    #entry-screen.hidden { display: none; }
+
+    #entry-sunburst {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 220vw;
+      height: 220vw;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: repeating-conic-gradient(#1b6b67 0deg 9deg, #7a2426 9deg 18deg);
+      opacity: 0.18;
+    }
+
+    #entry-title {
+      position: relative;
+      margin: 0;
+      color: #7a2426;
+      font-family: "Baloo 2", sans-serif;
+      font-size: clamp(40px, 13vw, 64px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      line-height: 0.95;
+      text-shadow: 4px 4px 0 #e8a62e, 7px 7px 0 #241a14;
+    }
+
+    #entry-subtitle {
+      position: relative;
+      margin-top: 14px;
+      padding: 7px 22px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #1b6b67;
+      color: #f7efd9;
+      font-family: "Fredoka", sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    #entry-hint {
+      position: relative;
+      max-width: 300px;
+      margin: 26px 0 0;
+      color: #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      opacity: 0.8;
+    }
+
+    #entry-btn {
+      position: relative;
+      margin-top: 22px;
+      padding: 14px 38px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #e8a62e;
+      color: #241a14;
+      box-shadow: 4px 4px 0 #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #entry-btn:active {
+      transform: translate(3px, 3px);
+      box-shadow: 1px 1px 0 #241a14;
+    }
+
+    #scan-hud {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #scan-hud.visible { opacity: 1; }
+
+    #scan-frame {
+      position: relative;
+      width: 58vw;
+      max-width: 320px;
+      aspect-ratio: 1 / 1.15;
+    }
+
+    #scan-frame .corner {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      border: 4px solid #1b6b67;
+      animation: scan-pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes scan-pulse {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 1; }
+    }
+    #scan-frame .tl { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 10px 0 0 0; }
+    #scan-frame .tr { top: 0; right: 0; border-bottom: none; border-left: none; border-radius: 0 10px 0 0; }
+    #scan-frame .bl { bottom: 0; left: 0; border-top: none; border-right: none; border-radius: 0 0 0 10px; }
+    #scan-frame .br { right: 0; bottom: 0; border-top: none; border-left: none; border-radius: 0 0 10px 0; }
+
+    #scan-hint {
+      position: absolute;
+      bottom: -44px;
+      left: 50%;
+      padding: 6px 16px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.58);
+      color: #ffffff;
+      font-family: "Fredoka", sans-serif;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    #game-hud {
+      position: fixed;
+      top: 35px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #game-hud.visible { opacity: 1; }
+
+    #game-status {
+      padding: 8px 24px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #7a2426;
+      color: #f7efd9;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      font-family: "Baloo 2", sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-shadow: 2px 2px 0 #241a14;
+    }
+
+    #flip-btn {
+      padding: 10px 32px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #e8a62e;
+      color: #241a14;
+      box-shadow: 3px 3px 0 #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #flip-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #241a14;
+    }
+    #flip-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #ar-error-toast {
+      position: fixed;
+      bottom: 26px;
+      left: 50%;
+      z-index: 110;
+      display: none;
+      max-width: 86vw;
+      padding: 12px 18px;
+      border-radius: 14px;
+      transform: translateX(-50%);
+      background: rgba(20, 10, 8, 0.94);
+      color: #f7efd9;
+      font-family: "Fredoka", sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: center;
+    }
+    #ar-error-toast.visible { display: block; }
+
+    #ambient-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 44;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .ambient-dot {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #1b6b67;
+      opacity: 0;
+    }
+
+    #brand-watermark {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 42;
+      pointer-events: none;
+      background: transparent;
+      color: #f7efd9;
+      font-family: "Fredoka", sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55), 0 0 6px rgba(0, 0, 0, 0.35);
+      opacity: 0.92;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="entry-screen">
+    <div id="entry-sunburst"></div>
+    <h1 id="entry-title">90's MACHINE</h1>
+    <div id="entry-subtitle">Touch the Past, Feel the Memory</div>
+    <p id="entry-hint">Point your camera at the coin target, then tap below to begin.</p>
+    <button id="entry-btn" type="button">Tap to Begin</button>
+  </div>
+
+  <div id="scan-hud">
+    <div id="scan-frame">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+      <div id="scan-hint">Point at the coin image</div>
+    </div>
+  </div>
+
+  <div id="game-hud">
+    <div id="game-status">TAP TO FLIP</div>
+    <button id="flip-btn" type="button">FLIP COIN</button>
+  </div>
+
+  <div id="ambient-layer"></div>
+  <div id="ar-error-toast"></div>
+  <div id="brand-watermark">90&#8217;s Cafe, Khammam</div>
+
+  <a-scene
+    id="ar-scene"
+    mindar-image="
+      imageTargetSrc: ./targets.mind;
+      uiLoading: no;
+      uiScanning: no;
+      uiError: no;
+      autoStart: false;
+    "
+    color-space="sRGB"
+    renderer="
+      alpha: true;
+      antialias: true;
+      colorManagement: true;
+      physicallyCorrectLights: true;
+    "
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    embedded
+  >
+    <a-assets>
+      <a-asset-item id="coin-model" src="./GLB/coin.glb"></a-asset-item>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false">
+      <a-entity cursor="rayOrigin: mouse" raycaster="objects: [gltf-model]"></a-entity>
+    </a-camera>
+
+    <!-- Single Target for Coin (Index 0) -->
+    <a-entity id="target-coin" mindar-image-target="targetIndex: 0">
+      <a-entity 
+        id="model-entity-coin" 
+        gltf-model="#coin-model" 
+        rotation="0 0 0" 
+        position="0 -0.25 0" 
+        scale="0.3 0.3 0.3"
+      ></a-entity>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    const sceneEl = document.querySelector("#ar-scene");
+    const entryScreen = document.querySelector("#entry-screen");
+    const entryBtn = document.querySelector("#entry-btn");
+    const scanHud = document.querySelector("#scan-hud");
+    const gameHud = document.querySelector("#game-hud");
+    const gameStatus = document.querySelector("#game-status");
+    const flipBtn = document.querySelector("#flip-btn");
+    const errorToast = document.querySelector("#ar-error-toast");
+    const ambientLayer = document.querySelector("#ambient-layer");
+
+    const TARGET_SCALE = 0.3;
+    const targetEntity = document.querySelector("#target-coin");
+    const modelEntity = document.querySelector("#model-entity-coin");
+
+    let hasStartedAR = false;
+    let isTargetActive = false;
+    let isFlipping = false;
+    let activeTimeline = null;
+
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return audioCtx;
+    }
+
+    function playTone({ freq = 880, endFreq = null, duration = 0.2, type = "triangle", volume = 0.25 }) {
+      const ctx = getAudioCtx();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(freq, ctx.currentTime);
+      if (endFreq) oscillator.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + duration * 0.6);
+
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(volume, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + duration + 0.05);
+    }
+
+    const playTapSound = () => playTone({ freq: 420, endFreq: 620, duration: 0.15, type: "sine", volume: 0.2 });
+    const playLockOnChime = () => playTone({ freq: 620, endFreq: 980, duration: 0.28, type: "triangle", volume: 0.28 });
+    const playFlipSound = () => playTone({ freq: 300, endFreq: 900, duration: 0.4, type: "sawtooth", volume: 0.15 });
+
+    gsap.set("#entry-title, #entry-subtitle, #entry-hint, #entry-btn", { opacity: 0 });
+    gsap.set("#entry-title", { scale: 0.7 });
+    gsap.to("#entry-sunburst", { rotate: 360, duration: 50, repeat: -1, ease: "none" });
+
+    gsap.timeline()
+      .to("#entry-title", { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.6)" }, 0.1)
+      .to("#entry-subtitle", { opacity: 1, duration: 0.4 }, 0.4)
+      .to("#entry-hint", { opacity: 1, duration: 0.4 }, 0.6)
+      .to("#entry-btn", { opacity: 1, duration: 0.4 }, 0.75);
+
+    sceneEl.addEventListener("arReady", () => {
+      errorToast.classList.remove("visible");
+    });
+
+    sceneEl.addEventListener("arError", (event) => {
+      console.error("90's MACHINE: MindAR camera error:", event.detail);
+      errorToast.textContent = "Camera could not start. Ensure camera permission is granted and running via HTTPS.";
+      errorToast.classList.add("visible");
+    });
+
+    entryBtn.addEventListener("click", async () => {
+      if (entryBtn.disabled) return;
+
+      try {
+        const ctx = getAudioCtx();
+        if (ctx.state === "suspended") await ctx.resume();
+        playTapSound();
+
+        if (!hasStartedAR) {
+          entryBtn.disabled = true;
+          entryBtn.textContent = "Starting camera…";
+
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            const primingStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            primingStream.getTracks().forEach((track) => track.stop());
+          }
+
+          const mindarSystem = sceneEl.systems["mindar-image-system"];
+          if (mindarSystem) {
+            await mindarSystem.start();
+            hasStartedAR = true;
+          }
+        }
+
+        gsap.to("#entry-screen", {
+          opacity: 0,
+          scale: 1.05,
+          duration: 0.4,
+          ease: "power1.in",
+          onComplete: () => {
+            entryScreen.classList.add("hidden");
+            if (!isTargetActive) {
+              scanHud.classList.add("visible");
+              startAmbientParticles();
+            }
+          }
+        });
+      } catch (error) {
+        console.error("90's MACHINE: Start error:", error);
+        errorToast.textContent = "Could not open camera. Allow camera permissions and reload.";
+        errorToast.classList.add("visible");
+        entryBtn.disabled = false;
+        entryBtn.textContent = "Tap to Begin";
+      }
+    });
+
+    function resetGameState() {
+      if (activeTimeline) activeTimeline.kill();
+      if (modelEntity && modelEntity.object3D) {
+        gsap.killTweensOf(modelEntity.object3D.position);
+        gsap.killTweensOf(modelEntity.object3D.rotation);
+        modelEntity.object3D.position.set(0, -0.25, 0);
+        modelEntity.object3D.rotation.set(0, 0, 0);
+      }
+      isFlipping = false;
+      flipBtn.disabled = false;
+      flipBtn.textContent = "FLIP COIN";
+      gameStatus.textContent = "TAP TO FLIP";
+    }
+
+    function flipCoin() {
+      if (isFlipping || !isTargetActive || !modelEntity.object3D) return;
+      
+      if (activeTimeline) activeTimeline.kill();
+      isFlipping = true;
+      flipBtn.disabled = true;
+
+      gameStatus.textContent = "FLIPPING...";
+      playFlipSound();
+
+      const isHeads = Math.random() < 0.5;
+      const extraSpins = 4 * (Math.PI * 2);
+      const finalY = isHeads ? extraSpins : extraSpins + Math.PI;
+
+      const obj3D = modelEntity.object3D;
+      obj3D.position.set(0, -0.25, 0);
+      obj3D.rotation.set(0, 0, 0);
+
+      activeTimeline = gsap.timeline({
+        onComplete: () => {
+          isFlipping = false;
+          flipBtn.disabled = false;
+          flipBtn.textContent = "FLIP AGAIN";
+          gameStatus.textContent = isHeads ? "HEADS!" : "TAILS!";
+          playLockOnChime();
+        }
+      })
+      .to(obj3D.position, { y: 0.35, duration: 0.5, ease: "power2.out" }, 0)
+      .to(obj3D.rotation, { y: finalY, duration: 1.0, ease: "power1.inOut" }, 0)
+      .to(obj3D.position, { y: -0.25, duration: 0.5, ease: "bounce.out" }, 0.5);
+    }
+
+    flipBtn.addEventListener("click", flipCoin);
+    modelEntity.addEventListener("click", flipCoin);
+
+    function triggerModelAnimation(entity) {
+      if (!entity) return;
+
+      if (entity.object3D) {
+        gsap.killTweensOf(entity.object3D.scale);
+        entity.object3D.rotation.set(0, 0, 0);
+
+        gsap.fromTo(
+          entity.object3D.scale,
+          { x: 0.001, y: 0.001, z: 0.001 },
+          { x: TARGET_SCALE, y: TARGET_SCALE, z: TARGET_SCALE, duration: 0.5, ease: "elastic.out(1, 0.55)" }
+        );
+      } else {
+        entity.setAttribute("scale", `${TARGET_SCALE} ${TARGET_SCALE} ${TARGET_SCALE}`);
+      }
+    }
+
+    function revealSequence() {
+      if (!modelEntity) return;
+
+      if (modelEntity.hasLoaded) {
+        triggerModelAnimation(modelEntity);
+      } else {
+        modelEntity.addEventListener("model-loaded", () => {
+          triggerModelAnimation(modelEntity);
+        }, { once: true });
+      }
+    }
+
+    function hideSequence() {
+      if (modelEntity && modelEntity.object3D) {
+        gsap.killTweensOf(modelEntity.object3D.scale);
+
+        gsap.to(modelEntity.object3D.scale, {
+          x: 0.001, y: 0.001, z: 0.001,
+          duration: 0.2,
+          ease: "power1.in"
+        });
+      }
+    }
+
+    targetEntity.addEventListener("targetFound", () => {
+      isTargetActive = true;
+      scanHud.classList.remove("visible");
+      gameHud.classList.add("visible");
+      resetGameState();
+      stopAmbientParticles();
+      playLockOnChime();
+      revealSequence();
+    });
+
+    targetEntity.addEventListener("targetLost", () => {
+      isTargetActive = false;
+      gameHud.classList.remove("visible");
+      resetGameState();
+      hideSequence();
+
+      if (entryScreen.classList.contains("hidden")) {
+        scanHud.classList.add("visible");
+        startAmbientParticles();
+      }
+    });
+
+    let ambientTimer = null;
+
+    function spawnAmbientDot() {
+      const dot = document.createElement("div");
+      dot.className = "ambient-dot";
+
+      const x = window.innerWidth * (0.3 + Math.random() * 0.4);
+      const startY = window.innerHeight * 0.75;
+      dot.style.left = `${x}px`;
+      dot.style.top = `${startY}px`;
+      ambientLayer.appendChild(dot);
+
+      gsap.timeline({ onComplete: () => dot.remove() })
+        .to(dot, { opacity: 0.6, duration: 0.4 }, 0)
+        .to(dot, { y: -180 - Math.random() * 100, x: `+=${(Math.random() - 0.5) * 60}`, duration: 2.4, ease: "power1.out" }, 0)
+        .to(dot, { opacity: 0, duration: 0.5 }, 1.9);
+    }
+
+    function startAmbientParticles() {
+      if (ambientTimer) return;
+      spawnAmbientDot();
+      ambientTimer = window.setInterval(spawnAmbientDot, 700);
+    }
+
+    function stopAmbientParticles() {
+      if (ambientTimer) {
+        window.clearInterval(ambientTimer);
+        ambientTimer = null;
+      }
+    }
+
+    sceneEl.addEventListener("loaded", () => {
+      if (modelEntity) {
+        modelEntity.setAttribute("scale", "0.001 0.001 0.001");
+      }
+    });
+  </script>
+</body>
+</html>
