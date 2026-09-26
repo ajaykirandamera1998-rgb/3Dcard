@@ -470,7 +470,12 @@
     device-orientation-permission-ui="enabled: false"
     embedded
   >
-    <a-assets>
+    <a-assets timeout="20000">
+      <!-- CHECK THIS PATH: devtools showed "GLB/retrotv.glb" returning a
+           404 on the live site. Confirm the file actually exists at this
+           exact path/case in your repo (GitHub Pages is case-sensitive) --
+           this is a separate issue from the camera bug, not fixed by
+           anything below. -->
       <a-asset-item id="tv-model" src="GLB/retrotv.glb"></a-asset-item>
       <a-asset-item id="coin-model" src="GLB/coin.glb"></a-asset-item>
 
@@ -682,12 +687,18 @@
             entryBtn.disabled = true;
             entryBtn.textContent = "Starting camera…";
 
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-              console.log("90's MACHINE: requesting camera permission…");
-              const primingStream = await navigator.mediaDevices.getUserMedia({ video: true });
-              primingStream.getTracks().forEach((track) => track.stop());
-              console.log("90's MACHINE: camera permission OK.");
-            } else {
+            // NOTE: deliberately NOT doing a separate "priming"
+            // getUserMedia call here anymore. Doing one and then
+            // immediately mindarSystem.start()'s own internal getUserMedia
+            // call right after was causing the two to race for the same
+            // camera hardware -- the browser doesn't always release the
+            // camera instantly even after track.stop(), which produced
+            // exactly the AbortError/NotReadableError seen in devtools.
+            // waitForMindarSystem() below already handles the "system
+            // not ready yet" case that the priming call was originally
+            // trying to work around, so this single start() call is both
+            // simpler and more reliable.
+            if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
               throw new Error("getUserMedia unavailable -- not on HTTPS or localhost.");
             }
 
@@ -949,4 +960,4 @@
     });
   </script>
 </body>
-</html>
+</html>v
