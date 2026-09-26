@@ -25,7 +25,7 @@
       height: 100%;
       margin: 0;
       overflow: hidden;
-      background: #000;
+      background: transparent;
       touch-action: none;
     }
 
@@ -298,7 +298,7 @@
       cursor: not-allowed;
     }
 
-    /* Bottom Retro TV Controls */
+    /* Bottom TV HUD Controls */
     #tv-hud {
       position: fixed;
       bottom: 35px;
@@ -380,6 +380,33 @@
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55), 0 0 6px rgba(0, 0, 0, 0.35);
       opacity: 0.92;
     }
+
+    /* Always-available manual audio unlock, bottom-left corner (the
+       right corner is already the cafe watermark). Covers the case
+       where autoplay-with-sound got blocked by the browser and the TV's
+       video/audio silently never started, or the tap-to-begin unlock
+       didn't stick for some reason on a specific device. */
+    #enable-audio-btn {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      z-index: 90;
+      padding: 8px 16px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #1b6b67;
+      color: #f7efd9;
+      font-family: "Fredoka", sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 2px 2px 0 #241a14;
+      cursor: pointer;
+      opacity: 0.92;
+    }
+    #enable-audio-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0 0 0 #241a14;
+    }
   </style>
 </head>
 
@@ -428,6 +455,7 @@
   <div id="ambient-layer"></div>
   <div id="ar-error-toast"></div>
   <div id="brand-watermark">90&#8217;s Cafe, Khammam</div>
+  <button id="enable-audio-btn" type="button">🔊 Enable Audio</button>
 
   <a-scene
     id="ar-scene"
@@ -450,9 +478,11 @@
     embedded
   >
     <a-assets>
+      <!-- GLB Assets -->
       <a-asset-item id="tv-model" src="GLB/retrotv.glb"></a-asset-item>
       <a-asset-item id="coin-model" src="GLB/coin.glb"></a-asset-item>
 
+      <!-- Video Screen -->
       <video
         id="tv-video"
         src="video/TV/tvglitch.mp4"
@@ -464,6 +494,7 @@
         muted
       ></video>
 
+      <!-- Audio Asset -->
       <audio id="tv-audio" src="video/TV/tvglitchaudio.mp3" preload="auto" loop></audio>
     </a-assets>
 
@@ -486,12 +517,12 @@
           position="0 0.28 0.08"
           width="0.82"
           height="0.62"
-          material="shader: flat; src: #tv-video"
+          material="shader: flat"
         ></a-plane>
       </a-entity>
     </a-entity>
 
-    <!-- Target Index 1: Coin Flip Game -->
+    <!-- Target Index 1: Coin Flip Game (Prominent Larger Scale) -->
     <a-entity id="target-coin" mindar-image-target="targetIndex: 1">
       <a-entity 
         id="model-entity-coin" 
@@ -527,6 +558,7 @@
 
     const errorToast = document.querySelector("#ar-error-toast");
     const ambientLayer = document.querySelector("#ambient-layer");
+    const enableAudioBtn = document.querySelector("#enable-audio-btn");
 
     // Model Scales
     const COIN_SCALE = 0.65;
@@ -546,7 +578,7 @@
     // Game State
     let playerScore = 0;
     let aiScore = 0;
-    let selectedChoice = "HEADS";
+    let selectedChoice = "HEADS"; // Default prediction
 
     let audioCtx = null;
     function getAudioCtx() {
@@ -555,27 +587,22 @@
     }
 
     function playTone({ freq = 880, endFreq = null, duration = 0.2, type = "triangle", volume = 0.25 }) {
-      try {
-        const ctx = getAudioCtx();
-        if (ctx.state === "suspended") ctx.resume();
-        const oscillator = ctx.createOscillator();
-        const gain = ctx.createGain();
+      const ctx = getAudioCtx();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-        oscillator.type = type;
-        oscillator.frequency.setValueAtTime(freq, ctx.currentTime);
-        if (endFreq) oscillator.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + duration * 0.6);
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(freq, ctx.currentTime);
+      if (endFreq) oscillator.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + duration * 0.6);
 
-        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(volume, ctx.currentTime + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(volume, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
 
-        oscillator.connect(gain);
-        gain.connect(ctx.destination);
-        oscillator.start();
-        oscillator.stop(ctx.currentTime + duration + 0.05);
-      } catch (e) {
-        console.warn("WebAudio playback error:", e);
-      }
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + duration + 0.05);
     }
 
     const playTapSound = () => playTone({ freq: 420, endFreq: 620, duration: 0.15, type: "sine", volume: 0.2 });
@@ -603,6 +630,31 @@
       errorToast.classList.add("visible");
     });
 
+    // Waits (up to a few seconds) for MindAR's system to actually be
+    // registered on the scene, instead of assuming it's ready the instant
+    // the button is tapped. This is what was silently failing before:
+    // if the system wasn't ready yet, the old code just skipped starting
+    // AR entirely with no error, and the entry screen still faded away
+    // regardless -- which looks exactly like "camera never opened."
+    function waitForMindarSystem(timeoutMs = 8000) {
+      return new Promise((resolve, reject) => {
+        const existing = sceneEl.systems["mindar-image-system"];
+        if (existing) { resolve(existing); return; }
+
+        const start = performance.now();
+        const poll = () => {
+          const sys = sceneEl.systems["mindar-image-system"];
+          if (sys) { resolve(sys); return; }
+          if (performance.now() - start > timeoutMs) {
+            reject(new Error("mindar-image-system never became available"));
+            return;
+          }
+          requestAnimationFrame(poll);
+        };
+        poll();
+      });
+    }
+
     entryBtn.addEventListener("click", async () => {
       if (entryBtn.disabled) return;
 
@@ -611,26 +663,31 @@
         if (ctx.state === "suspended") await ctx.resume();
         playTapSound();
 
-        // Unlock media elements for mobile browsers
-        tvVideo.play().then(() => tvVideo.pause()).catch(() => {});
-        tvAudio.play().then(() => tvAudio.pause()).catch(() => {});
-
         if (!hasStartedAR) {
           entryBtn.disabled = true;
           entryBtn.textContent = "Starting camera…";
 
           if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            console.log("90's MACHINE: requesting camera permission…");
             const primingStream = await navigator.mediaDevices.getUserMedia({ video: true });
             primingStream.getTracks().forEach((track) => track.stop());
+            console.log("90's MACHINE: camera permission OK.");
+          } else {
+            throw new Error("getUserMedia is not available -- this page is probably not on HTTPS or localhost.");
           }
 
-          const mindarSystem = sceneEl.systems["mindar-image-system"];
-          if (mindarSystem) {
-            await mindarSystem.start();
-            hasStartedAR = true;
-          }
+          console.log("90's MACHINE: waiting for mindar-image-system…");
+          const mindarSystem = await waitForMindarSystem();
+
+          console.log("90's MACHINE: starting MindAR…");
+          await mindarSystem.start();
+          hasStartedAR = true;
+          console.log("90's MACHINE: MindAR started OK.");
         }
 
+        // Only fade the entry screen once AR has genuinely started --
+        // previously this ran unconditionally even if the block above
+        // had silently done nothing.
         gsap.to("#entry-screen", {
           opacity: 0,
           scale: 1.05,
@@ -646,7 +703,7 @@
         });
       } catch (error) {
         console.error("90's MACHINE: Start error:", error);
-        errorToast.textContent = "Could not open camera. Allow camera permissions and reload.";
+        errorToast.textContent = "Could not open camera. Allow camera permissions, make sure you're on HTTPS (or localhost), then reload.";
         errorToast.classList.add("visible");
         entryBtn.disabled = false;
         entryBtn.textContent = "Tap to Begin";
@@ -685,7 +742,7 @@
       gameStatus.textContent = `You selected ${selectedChoice}!`;
     }
 
-    /* Interactive Coin Toss with Vertical Spin */
+    /* Interactive Coin Toss & Score Calculation */
     function flipCoin() {
       if (isFlipping || !isCoinActive || !modelCoin.object3D) return;
       
@@ -698,10 +755,8 @@
 
       const isHeads = Math.random() < 0.5;
       const resultText = isHeads ? "HEADS" : "TAILS";
-      
-      // Rotate 8 full turns + half turn for Tails
-      const extraSpins = 8 * Math.PI;
-      const finalX = isHeads ? extraSpins : extraSpins + Math.PI;
+      const extraSpins = 4 * (Math.PI * 2);
+      const finalY = isHeads ? extraSpins : extraSpins + Math.PI;
 
       const obj3D = modelCoin.object3D;
       obj3D.position.set(0, -0.2, 0);
@@ -727,12 +782,38 @@
         }
       })
       .to(obj3D.position, { y: 0.35, duration: 0.5, ease: "power2.out" }, 0)
-      .to(obj3D.rotation, { x: finalX, y: Math.PI * 2, duration: 1.0, ease: "power1.inOut" }, 0)
+      .to(obj3D.rotation, { y: finalY, duration: 1.0, ease: "power1.inOut" }, 0)
       .to(obj3D.position, { y: -0.2, duration: 0.5, ease: "bounce.out" }, 0.5);
     }
 
     flipBtn.addEventListener("click", flipCoin);
     modelCoin.addEventListener("click", flipCoin);
+
+    /* Manual audio unlock -- always available, bottom-left corner */
+    enableAudioBtn.addEventListener("click", async () => {
+      try {
+        const ctx = getAudioCtx();
+        if (ctx.state === "suspended") await ctx.resume();
+        playTapSound();
+
+        tvVideo.muted = false;
+        tvAudio.muted = false;
+        muteTvBtn.textContent = "Mute";
+
+        // If the TV is currently the active target, retry playback in
+        // case it had been silently blocked by autoplay restrictions.
+        if (isTvActive) {
+          try { await tvVideo.play(); } catch (e) { console.warn("90's MACHINE: tv-video still blocked:", e); }
+          try { await tvAudio.play(); } catch (e) { console.warn("90's MACHINE: tv-audio still blocked:", e); }
+          playTvBtn.textContent = "Pause Video";
+        }
+
+        enableAudioBtn.textContent = "🔊 Audio Enabled";
+        setTimeout(() => { enableAudioBtn.textContent = "🔊 Enable Audio"; }, 1500);
+      } catch (error) {
+        console.error("90's MACHINE: Enable Audio error:", error);
+      }
+    });
 
     /* Retro TV Controls */
     playTvBtn.addEventListener("click", () => {
@@ -785,12 +866,6 @@
       playWinSound();
       revealModel(modelTv, TV_SCALE);
 
-      // Force refresh plane material texture for WebGL canvas
-      const plane = document.querySelector("#tv-screen-plane");
-      if (plane && plane.components.material) {
-        plane.components.material.material.map.needsUpdate = true;
-      }
-
       tvVideo.play().catch(e => console.log("Video playback restricted:", e));
       tvAudio.play().catch(e => console.log("Audio playback restricted:", e));
       playTvBtn.textContent = "Pause Video";
@@ -802,13 +877,54 @@
       hideModel(modelTv);
       tvVideo.pause();
       tvAudio.pause();
-      tvVideo.currentTime = 0;
 
       if (!isCoinActive && entryScreen.classList.contains("hidden")) {
         scanHud.classList.add("visible");
         startAmbientParticles();
       }
     });
+
+    /* ------------------------------------------------------------- */
+    /* Finger drag-to-rotate for the Retro TV only (Sketchfab-style    */
+    /* manual orbit). The coin already has its own flip-game rotation */
+    /* via GSAP, so this is deliberately gated to isTvActive only --  */
+    /* dragging while the coin is active does nothing, leaving the    */
+    /* existing tap-to-flip behavior on the coin untouched.            */
+    /* ------------------------------------------------------------- */
+
+    const DRAG_SENSITIVITY_Y = 0.008;
+    const DRAG_SENSITIVITY_X = 0.006;
+    const TILT_LIMIT = Math.PI / 3;
+
+    let isDraggingTv = false;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+
+    document.addEventListener("pointerdown", (event) => {
+      if (!isTvActive || !modelTv || !modelTv.object3D) return;
+      isDraggingTv = true;
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+    });
+
+    document.addEventListener("pointermove", (event) => {
+      if (!isDraggingTv || !isTvActive || !modelTv || !modelTv.object3D) return;
+
+      const deltaX = event.clientX - lastPointerX;
+      const deltaY = event.clientY - lastPointerY;
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+
+      const obj3D = modelTv.object3D;
+      obj3D.rotation.y += deltaX * DRAG_SENSITIVITY_Y;
+      obj3D.rotation.x += deltaY * DRAG_SENSITIVITY_X;
+      obj3D.rotation.x = Math.max(-TILT_LIMIT, Math.min(TILT_LIMIT, obj3D.rotation.x));
+    });
+
+    function endTvDrag() { isDraggingTv = false; }
+    document.addEventListener("pointerup", endTvDrag);
+    document.addEventListener("pointercancel", endTvDrag);
+    document.addEventListener("pointerleave", endTvDrag);
 
     function revealModel(entity, targetScale) {
       if (!entity) return;
