@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>90's MACHINE - HEADS OR TAILS</title>
+  <title>90's MACHINE - RETRO TV & COIN DUEL</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -65,6 +65,7 @@
       display: none !important;
     }
 
+    /* Entry Screen */
     #entry-screen {
       position: fixed;
       inset: 0;
@@ -147,6 +148,7 @@
       box-shadow: 1px 1px 0 #241a14;
     }
 
+    /* Scanning Crosshair HUD */
     #scan-hud {
       position: fixed;
       inset: 0;
@@ -197,45 +199,93 @@
       white-space: nowrap;
     }
 
+    /* Bottom Game HUD Overlay */
     #game-hud {
       position: fixed;
-      top: 35px;
+      bottom: 25px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 80;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      width: 90vw;
+      max-width: 380px;
       pointer-events: auto;
       opacity: 0;
       transition: opacity 0.35s ease;
     }
     #game-hud.visible { opacity: 1; }
 
-    #game-status {
-      padding: 8px 24px;
+    /* Scoreboard Header */
+    #scoreboard {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 8px 18px;
       border: 3px solid #241a14;
-      border-radius: 999px;
+      border-radius: 16px;
       background: #7a2426;
       color: #f7efd9;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
       font-family: "Baloo 2", sans-serif;
-      font-size: 24px;
+      font-size: 18px;
       font-weight: 800;
-      letter-spacing: 0.5px;
-      text-shadow: 2px 2px 0 #241a14;
+      text-shadow: 1px 1px 0 #241a14;
+    }
+
+    #game-status {
+      padding: 6px 20px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #1b6b67;
+      color: #f7efd9;
+      font-family: "Fredoka", sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      text-align: center;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    }
+
+    /* Choice Buttons: Heads vs Tails */
+    #choice-container {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .choice-btn {
+      flex: 1;
+      padding: 10px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #f2e6c9;
+      color: #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 #241a14;
+      transition: all 0.2s ease;
+    }
+    .choice-btn.selected {
+      background: #e8a62e;
+      color: #241a14;
+      transform: scale(1.03);
     }
 
     #flip-btn {
-      padding: 10px 32px;
+      width: 100%;
+      padding: 12px;
       border: 3px solid #241a14;
       border-radius: 999px;
       background: #e8a62e;
       color: #241a14;
       box-shadow: 3px 3px 0 #241a14;
       font-family: "Fredoka", sans-serif;
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 600;
       cursor: pointer;
     }
@@ -246,6 +296,38 @@
     #flip-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
+    }
+
+    /* Bottom TV HUD Controls */
+    #tv-hud {
+      position: fixed;
+      bottom: 35px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      display: flex;
+      gap: 12px;
+      pointer-events: auto;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #tv-hud.visible { opacity: 1; }
+
+    .hud-btn {
+      padding: 10px 22px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #1b6b67;
+      color: #f7efd9;
+      box-shadow: 3px 3px 0 #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .hud-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #241a14;
     }
 
     #ar-error-toast {
@@ -306,7 +388,7 @@
     <div id="entry-sunburst"></div>
     <h1 id="entry-title">90's MACHINE</h1>
     <div id="entry-subtitle">Touch the Past, Feel the Memory</div>
-    <p id="entry-hint">Point your camera at the coin target, then tap below to begin.</p>
+    <p id="entry-hint">Point your camera at a target image, then tap below to begin.</p>
     <button id="entry-btn" type="button">Tap to Begin</button>
   </div>
 
@@ -316,13 +398,31 @@
       <div class="corner tr"></div>
       <div class="corner bl"></div>
       <div class="corner br"></div>
-      <div id="scan-hint">Point at the coin image</div>
+      <div id="scan-hint">Point camera at TV or Coin</div>
     </div>
   </div>
 
+  <!-- Bottom Coin Game Controls -->
   <div id="game-hud">
-    <div id="game-status">TAP TO FLIP</div>
+    <div id="scoreboard">
+      <div>YOU: <span id="player-score">0</span></div>
+      <div>VS</div>
+      <div>AI: <span id="ai-score">0</span></div>
+    </div>
+    <div id="game-status">Pick HEADS or TAILS to play!</div>
+    
+    <div id="choice-container">
+      <button id="choose-heads" class="choice-btn selected" type="button">HEADS</button>
+      <button id="choose-tails" class="choice-btn" type="button">TAILS</button>
+    </div>
+
     <button id="flip-btn" type="button">FLIP COIN</button>
+  </div>
+
+  <!-- Bottom Retro TV Controls -->
+  <div id="tv-hud">
+    <button id="play-tv-btn" class="hud-btn" type="button">Play Video</button>
+    <button id="mute-tv-btn" class="hud-btn" type="button">Unmute</button>
   </div>
 
   <div id="ambient-layer"></div>
@@ -350,21 +450,58 @@
     embedded
   >
     <a-assets>
-      <a-asset-item id="coin-model" src="./GLB/coin.glb"></a-asset-item>
+      <!-- GLB Assets -->
+      <a-asset-item id="tv-model" src="GLB/retrotv.glb"></a-asset-item>
+      <a-asset-item id="coin-model" src="GLB/coin.glb"></a-asset-item>
+
+      <!-- Video Screen -->
+      <video
+        id="tv-video"
+        src="video/TV/tvglitch.mp4"
+        preload="auto"
+        loop
+        crossorigin="anonymous"
+        webkit-playsinline
+        playsinline
+        muted
+      ></video>
+
+      <!-- Audio Asset -->
+      <audio id="tv-audio" src="video/TV/tvglitchaudio.mp3" preload="auto" loop></audio>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false">
       <a-entity cursor="rayOrigin: mouse" raycaster="objects: [gltf-model]"></a-entity>
     </a-camera>
 
-    <!-- Single Target for Coin (Index 0) -->
-    <a-entity id="target-coin" mindar-image-target="targetIndex: 0">
+    <!-- Target Index 0: Retro TV -->
+    <a-entity id="target-tv" mindar-image-target="targetIndex: 0">
+      <a-entity 
+        id="model-entity-tv" 
+        gltf-model="#tv-model" 
+        rotation="0 0 0" 
+        position="0 -0.2 0" 
+        scale="0.35 0.35 0.35"
+      >
+        <a-plane
+          id="tv-screen-plane"
+          src="#tv-video"
+          position="0 0.28 0.08"
+          width="0.82"
+          height="0.62"
+          material="shader: flat"
+        ></a-plane>
+      </a-entity>
+    </a-entity>
+
+    <!-- Target Index 1: Coin Flip Game (Prominent Larger Scale) -->
+    <a-entity id="target-coin" mindar-image-target="targetIndex: 1">
       <a-entity 
         id="model-entity-coin" 
         gltf-model="#coin-model" 
         rotation="0 0 0" 
-        position="0 -0.25 0" 
-        scale="0.3 0.3 0.3"
+        position="0 -0.2 0" 
+        scale="0.65 0.65 0.65"
       ></a-entity>
     </a-entity>
   </a-scene>
@@ -374,20 +511,45 @@
     const entryScreen = document.querySelector("#entry-screen");
     const entryBtn = document.querySelector("#entry-btn");
     const scanHud = document.querySelector("#scan-hud");
+    
+    // Coin HUD Elements
     const gameHud = document.querySelector("#game-hud");
     const gameStatus = document.querySelector("#game-status");
+    const playerScoreEl = document.querySelector("#player-score");
+    const aiScoreEl = document.querySelector("#ai-score");
+    const chooseHeadsBtn = document.querySelector("#choose-heads");
+    const chooseTailsBtn = document.querySelector("#choose-tails");
     const flipBtn = document.querySelector("#flip-btn");
+
+    // TV HUD Elements
+    const tvHud = document.querySelector("#tv-hud");
+    const playTvBtn = document.querySelector("#play-tv-btn");
+    const muteTvBtn = document.querySelector("#mute-tv-btn");
+    const tvVideo = document.querySelector("#tv-video");
+    const tvAudio = document.querySelector("#tv-audio");
+
     const errorToast = document.querySelector("#ar-error-toast");
     const ambientLayer = document.querySelector("#ambient-layer");
 
-    const TARGET_SCALE = 0.3;
-    const targetEntity = document.querySelector("#target-coin");
-    const modelEntity = document.querySelector("#model-entity-coin");
+    // Model Scales
+    const COIN_SCALE = 0.65;
+    const TV_SCALE = 0.35;
+
+    const targetCoin = document.querySelector("#target-coin");
+    const modelCoin = document.querySelector("#model-entity-coin");
+    const targetTv = document.querySelector("#target-tv");
+    const modelTv = document.querySelector("#model-entity-tv");
 
     let hasStartedAR = false;
-    let isTargetActive = false;
+    let isCoinActive = false;
+    let isTvActive = false;
     let isFlipping = false;
     let activeTimeline = null;
+
+    // Game State
+    let playerScore = 0;
+    let aiScore = 0;
+    let selectedChoice = "HEADS"; // Default prediction
 
     let audioCtx = null;
     function getAudioCtx() {
@@ -415,7 +577,8 @@
     }
 
     const playTapSound = () => playTone({ freq: 420, endFreq: 620, duration: 0.15, type: "sine", volume: 0.2 });
-    const playLockOnChime = () => playTone({ freq: 620, endFreq: 980, duration: 0.28, type: "triangle", volume: 0.28 });
+    const playWinSound = () => playTone({ freq: 520, endFreq: 1040, duration: 0.35, type: "triangle", volume: 0.3 });
+    const playLoseSound = () => playTone({ freq: 400, endFreq: 200, duration: 0.4, type: "sawtooth", volume: 0.2 });
     const playFlipSound = () => playTone({ freq: 300, endFreq: 900, duration: 0.4, type: "sawtooth", volume: 0.15 });
 
     gsap.set("#entry-title, #entry-subtitle, #entry-hint, #entry-btn", { opacity: 0 });
@@ -469,7 +632,7 @@
           ease: "power1.in",
           onComplete: () => {
             entryScreen.classList.add("hidden");
-            if (!isTargetActive) {
+            if (!isCoinActive && !isTvActive) {
               scanHud.classList.add("visible");
               startAmbientParticles();
             }
@@ -484,22 +647,41 @@
       }
     });
 
+    /* Side Selection Handlers */
+    chooseHeadsBtn.addEventListener("click", () => {
+      if (isFlipping) return;
+      playTapSound();
+      selectedChoice = "HEADS";
+      chooseHeadsBtn.classList.add("selected");
+      chooseTailsBtn.classList.remove("selected");
+    });
+
+    chooseTailsBtn.addEventListener("click", () => {
+      if (isFlipping) return;
+      playTapSound();
+      selectedChoice = "TAILS";
+      chooseTailsBtn.classList.add("selected");
+      chooseHeadsBtn.classList.remove("selected");
+    });
+
+    /* Game State Reset */
     function resetGameState() {
       if (activeTimeline) activeTimeline.kill();
-      if (modelEntity && modelEntity.object3D) {
-        gsap.killTweensOf(modelEntity.object3D.position);
-        gsap.killTweensOf(modelEntity.object3D.rotation);
-        modelEntity.object3D.position.set(0, -0.25, 0);
-        modelEntity.object3D.rotation.set(0, 0, 0);
+      if (modelCoin && modelCoin.object3D) {
+        gsap.killTweensOf(modelCoin.object3D.position);
+        gsap.killTweensOf(modelCoin.object3D.rotation);
+        modelCoin.object3D.position.set(0, -0.2, 0);
+        modelCoin.object3D.rotation.set(0, 0, 0);
       }
       isFlipping = false;
       flipBtn.disabled = false;
       flipBtn.textContent = "FLIP COIN";
-      gameStatus.textContent = "TAP TO FLIP";
+      gameStatus.textContent = `You selected ${selectedChoice}!`;
     }
 
+    /* Interactive Coin Toss & Score Calculation */
     function flipCoin() {
-      if (isFlipping || !isTargetActive || !modelEntity.object3D) return;
+      if (isFlipping || !isCoinActive || !modelCoin.object3D) return;
       
       if (activeTimeline) activeTimeline.kill();
       isFlipping = true;
@@ -509,92 +691,138 @@
       playFlipSound();
 
       const isHeads = Math.random() < 0.5;
+      const resultText = isHeads ? "HEADS" : "TAILS";
       const extraSpins = 4 * (Math.PI * 2);
       const finalY = isHeads ? extraSpins : extraSpins + Math.PI;
 
-      const obj3D = modelEntity.object3D;
-      obj3D.position.set(0, -0.25, 0);
+      const obj3D = modelCoin.object3D;
+      obj3D.position.set(0, -0.2, 0);
       obj3D.rotation.set(0, 0, 0);
 
       activeTimeline = gsap.timeline({
         onComplete: () => {
           isFlipping = false;
           flipBtn.disabled = false;
-          flipBtn.textContent = "FLIP AGAIN";
-          gameStatus.textContent = isHeads ? "HEADS!" : "TAILS!";
-          playLockOnChime();
+          flipBtn.textContent = "PLAY AGAIN";
+
+          if (selectedChoice === resultText) {
+            playerScore++;
+            playerScoreEl.textContent = playerScore;
+            gameStatus.textContent = `It's ${resultText}! YOU WIN THIS ROUND! 🎉`;
+            playWinSound();
+          } else {
+            aiScore++;
+            aiScoreEl.textContent = aiScore;
+            gameStatus.textContent = `It's ${resultText}! AI WINS THIS ROUND! 🤖`;
+            playLoseSound();
+          }
         }
       })
       .to(obj3D.position, { y: 0.35, duration: 0.5, ease: "power2.out" }, 0)
       .to(obj3D.rotation, { y: finalY, duration: 1.0, ease: "power1.inOut" }, 0)
-      .to(obj3D.position, { y: -0.25, duration: 0.5, ease: "bounce.out" }, 0.5);
+      .to(obj3D.position, { y: -0.2, duration: 0.5, ease: "bounce.out" }, 0.5);
     }
 
     flipBtn.addEventListener("click", flipCoin);
-    modelEntity.addEventListener("click", flipCoin);
+    modelCoin.addEventListener("click", flipCoin);
 
-    function triggerModelAnimation(entity) {
+    /* Retro TV Controls */
+    playTvBtn.addEventListener("click", () => {
+      if (tvVideo.paused) {
+        tvVideo.play();
+        tvAudio.play();
+        playTvBtn.textContent = "Pause Video";
+      } else {
+        tvVideo.pause();
+        tvAudio.pause();
+        playTvBtn.textContent = "Play Video";
+      }
+    });
+
+    muteTvBtn.addEventListener("click", () => {
+      tvVideo.muted = !tvVideo.muted;
+      tvAudio.muted = !tvAudio.muted;
+      muteTvBtn.textContent = tvVideo.muted ? "Unmute" : "Mute";
+    });
+
+    /* Target Handlers - Coin */
+    targetCoin.addEventListener("targetFound", () => {
+      isCoinActive = true;
+      scanHud.classList.remove("visible");
+      gameHud.classList.add("visible");
+      resetGameState();
+      stopAmbientParticles();
+      playWinSound();
+      revealModel(modelCoin, COIN_SCALE);
+    });
+
+    targetCoin.addEventListener("targetLost", () => {
+      isCoinActive = false;
+      gameHud.classList.remove("visible");
+      resetGameState();
+      hideModel(modelCoin);
+
+      if (!isTvActive && entryScreen.classList.contains("hidden")) {
+        scanHud.classList.add("visible");
+        startAmbientParticles();
+      }
+    });
+
+    /* Target Handlers - Retro TV */
+    targetTv.addEventListener("targetFound", () => {
+      isTvActive = true;
+      scanHud.classList.remove("visible");
+      tvHud.classList.add("visible");
+      stopAmbientParticles();
+      playWinSound();
+      revealModel(modelTv, TV_SCALE);
+
+      tvVideo.play().catch(e => console.log("Video playback restricted:", e));
+      tvAudio.play().catch(e => console.log("Audio playback restricted:", e));
+      playTvBtn.textContent = "Pause Video";
+    });
+
+    targetTv.addEventListener("targetLost", () => {
+      isTvActive = false;
+      tvHud.classList.remove("visible");
+      hideModel(modelTv);
+      tvVideo.pause();
+      tvAudio.pause();
+
+      if (!isCoinActive && entryScreen.classList.contains("hidden")) {
+        scanHud.classList.add("visible");
+        startAmbientParticles();
+      }
+    });
+
+    function revealModel(entity, targetScale) {
       if (!entity) return;
+      const animate = () => {
+        if (entity.object3D) {
+          gsap.killTweensOf(entity.object3D.scale);
+          entity.object3D.rotation.set(0, 0, 0);
+          gsap.fromTo(
+            entity.object3D.scale,
+            { x: 0.001, y: 0.001, z: 0.001 },
+            { x: targetScale, y: targetScale, z: targetScale, duration: 0.5, ease: "elastic.out(1, 0.55)" }
+          );
+        }
+      };
 
-      if (entity.object3D) {
+      if (entity.hasLoaded) animate();
+      else entity.addEventListener("model-loaded", animate, { once: true });
+    }
+
+    function hideModel(entity) {
+      if (entity && entity.object3D) {
         gsap.killTweensOf(entity.object3D.scale);
-        entity.object3D.rotation.set(0, 0, 0);
-
-        gsap.fromTo(
-          entity.object3D.scale,
-          { x: 0.001, y: 0.001, z: 0.001 },
-          { x: TARGET_SCALE, y: TARGET_SCALE, z: TARGET_SCALE, duration: 0.5, ease: "elastic.out(1, 0.55)" }
-        );
-      } else {
-        entity.setAttribute("scale", `${TARGET_SCALE} ${TARGET_SCALE} ${TARGET_SCALE}`);
-      }
-    }
-
-    function revealSequence() {
-      if (!modelEntity) return;
-
-      if (modelEntity.hasLoaded) {
-        triggerModelAnimation(modelEntity);
-      } else {
-        modelEntity.addEventListener("model-loaded", () => {
-          triggerModelAnimation(modelEntity);
-        }, { once: true });
-      }
-    }
-
-    function hideSequence() {
-      if (modelEntity && modelEntity.object3D) {
-        gsap.killTweensOf(modelEntity.object3D.scale);
-
-        gsap.to(modelEntity.object3D.scale, {
+        gsap.to(entity.object3D.scale, {
           x: 0.001, y: 0.001, z: 0.001,
           duration: 0.2,
           ease: "power1.in"
         });
       }
     }
-
-    targetEntity.addEventListener("targetFound", () => {
-      isTargetActive = true;
-      scanHud.classList.remove("visible");
-      gameHud.classList.add("visible");
-      resetGameState();
-      stopAmbientParticles();
-      playLockOnChime();
-      revealSequence();
-    });
-
-    targetEntity.addEventListener("targetLost", () => {
-      isTargetActive = false;
-      gameHud.classList.remove("visible");
-      resetGameState();
-      hideSequence();
-
-      if (entryScreen.classList.contains("hidden")) {
-        scanHud.classList.add("visible");
-        startAmbientParticles();
-      }
-    });
 
     let ambientTimer = null;
 
@@ -628,9 +856,8 @@
     }
 
     sceneEl.addEventListener("loaded", () => {
-      if (modelEntity) {
-        modelEntity.setAttribute("scale", "0.001 0.001 0.001");
-      }
+      if (modelCoin) modelCoin.setAttribute("scale", "0.001 0.001 0.001");
+      if (modelTv) modelTv.setAttribute("scale", "0.001 0.001 0.001");
     });
   </script>
 </body>
