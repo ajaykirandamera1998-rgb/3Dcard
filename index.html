@@ -1,511 +1,879 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>90's MACHINE</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>90's MACHINE - RETRO TV & COIN DUEL</title>
 
-    <!-- A-Frame + MindAR -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Fredoka:wght@500;600&display=swap" rel="stylesheet" />
 
-    <style>
-      html,
-      body {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background: #000;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: #fff;
-      }
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 
-      body {
-        position: relative;
-      }
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-      /* AR container: full screen */
-      #ar-container {
-        position: fixed;
-        inset: 0;
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden;
-        z-index: 1;
-      }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      touch-action: none;
+    }
 
-      /* Ensure A-Frame scene and its video/canvas are full screen */
-      #ar-scene {
-        position: absolute !important;
-        inset: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        display: block !important;
-        z-index: 1;
-      }
+    video.mindar-video {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: cover !important;
+      z-index: 0 !important;
+      display: block !important;
+      background: transparent !important;
+    }
 
-      #ar-scene video {
-        position: absolute !important;
-        inset: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover !important;
-        z-index: 0 !important;
-        display: block !important;
-      }
+    canvas.mindar-canvas {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 1 !important;
+      display: block !important;
+      pointer-events: auto !important;
+    }
 
-      #ar-scene canvas {
-        position: absolute !important;
-        inset: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        z-index: 2 !important;
-        pointer-events: none;
-      }
+    a-scene, .a-canvas {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 2 !important;
+      display: block !important;
+      background: transparent !important;
+      pointer-events: auto !important;
+    }
 
-      /* UI layers above AR */
-      #ui-layer {
-        position: relative;
-        z-index: 10;
-        pointer-events: none; /* let touches pass through where no buttons */
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-      }
+    .a-enter-vr, .a-enter-ar, .a-orientation-modal, .a-loader-title {
+      display: none !important;
+    }
 
-      #ui-layer * {
-        pointer-events: auto;
-      }
+    /* Entry Screen */
+    #entry-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      background: #f2e6c9;
+    }
+    #entry-screen.hidden { display: none; }
 
-      /* Start screen */
-      #start-screen {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 20;
-        text-align: center;
-        padding: 24px;
-      }
+    #entry-sunburst {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 220vw;
+      height: 220vw;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: repeating-conic-gradient(#1b6b67 0deg 9deg, #7a2426 9deg 18deg);
+      opacity: 0.18;
+    }
 
-      #start-screen h1 {
-        font-size: 28px;
-        margin: 0 0 8px 0;
-      }
+    #entry-title {
+      position: relative;
+      margin: 0;
+      color: #7a2426;
+      font-family: "Baloo 2", sans-serif;
+      font-size: clamp(40px, 13vw, 64px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      line-height: 0.95;
+      text-shadow: 4px 4px 0 #e8a62e, 7px 7px 0 #241a14;
+    }
 
-      #start-screen p {
-        font-size: 14px;
-        margin: 4px 0;
-        opacity: 0.9;
-      }
+    #entry-subtitle {
+      position: relative;
+      margin-top: 14px;
+      padding: 7px 22px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #1b6b67;
+      color: #f7efd9;
+      font-family: "Fredoka", sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+    }
 
-      #start-button {
-        margin-top: 20px;
-        padding: 12px 24px;
-        font-size: 16px;
-        border: none;
-        border-radius: 8px;
-        background: #6c5ce7;
-        color: #fff;
-        cursor: pointer;
-      }
+    #entry-hint {
+      position: relative;
+      max-width: 300px;
+      margin: 26px 0 0;
+      color: #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      opacity: 0.8;
+    }
 
-      #start-button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
+    #entry-btn {
+      position: relative;
+      margin-top: 22px;
+      padding: 14px 38px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #e8a62e;
+      color: #241a14;
+      box-shadow: 4px 4px 0 #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #entry-btn:active {
+      transform: translate(3px, 3px);
+      box-shadow: 1px 1px 0 #241a14;
+    }
 
-      /* Top bar: title + target hint */
-      #top-bar {
-        padding: 12px 16px;
-        background: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0));
-      }
+    /* Scanning Crosshair HUD */
+    #scan-hud {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #scan-hud.visible { opacity: 1; }
 
-      #top-bar h1 {
-        font-size: 20px;
-        margin: 0;
-      }
+    #scan-frame {
+      position: relative;
+      width: 58vw;
+      max-width: 320px;
+      aspect-ratio: 1 / 1.15;
+    }
 
-      #top-bar p {
-        font-size: 12px;
-        margin: 4px 0 0 0;
-        opacity: 0.8;
-      }
+    #scan-frame .corner {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      border: 4px solid #1b6b67;
+      animation: scan-pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes scan-pulse {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 1; }
+    }
+    #scan-frame .tl { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 10px 0 0 0; }
+    #scan-frame .tr { top: 0; right: 0; border-bottom: none; border-left: none; border-radius: 0 10px 0 0; }
+    #scan-frame .bl { bottom: 0; left: 0; border-top: none; border-right: none; border-radius: 0 0 0 10px; }
+    #scan-frame .br { right: 0; bottom: 0; border-top: none; border-left: none; border-radius: 0 0 10px 0; }
 
-      /* Game panel */
-      #game-panel {
-        padding: 12px 16px 80px;
-        background: linear-gradient(0deg, rgba(0,0,0,0.8), rgba(0,0,0,0));
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-      }
+    #scan-hint {
+      position: absolute;
+      bottom: -44px;
+      left: 50%;
+      padding: 6px 16px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.58);
+      color: #ffffff;
+      font-family: "Fredoka", sans-serif;
+      font-size: 14px;
+      white-space: nowrap;
+    }
 
-      #score-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 16px;
-        font-weight: 600;
-      }
+    /* Bottom Game HUD Overlay */
+    #game-hud {
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 90vw;
+      max-width: 380px;
+      pointer-events: auto;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #game-hud.visible { opacity: 1; }
 
-      #coin-controls {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        width: 100%;
-      }
+    /* Scoreboard Header */
+    #scoreboard {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 8px 18px;
+      border: 3px solid #241a14;
+      border-radius: 16px;
+      background: #7a2426;
+      color: #f7efd9;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      font-family: "Baloo 2", sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      text-shadow: 1px 1px 0 #241a14;
+    }
 
-      #choice-row {
-        display: flex;
-        gap: 12px;
-      }
+    #game-status {
+      padding: 6px 20px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #1b6b67;
+      color: #f7efd9;
+      font-family: "Fredoka", sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      text-align: center;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    }
 
-      .choice-btn {
-        padding: 8px 14px;
-        border: 1px solid #fff;
-        border-radius: 6px;
-        background: transparent;
-        color: #fff;
-        font-size: 14px;
-        cursor: pointer;
-      }
+    /* Choice Buttons: Heads vs Tails */
+    #choice-container {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
 
-      .choice-btn.active {
-        background: #fff;
-        color: #000;
-      }
+    .choice-btn {
+      flex: 1;
+      padding: 10px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #f2e6c9;
+      color: #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 #241a14;
+      transition: all 0.2s ease;
+    }
+    .choice-btn.selected {
+      background: #e8a62e;
+      color: #241a14;
+      transform: scale(1.03);
+    }
 
-      #flip-btn {
-        padding: 10px 18px;
-        border: none;
-        border-radius: 8px;
-        background: #00b894;
-        color: #fff;
-        font-size: 15px;
-        cursor: pointer;
-      }
+    #flip-btn {
+      width: 100%;
+      padding: 12px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #e8a62e;
+      color: #241a14;
+      box-shadow: 3px 3px 0 #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #flip-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #241a14;
+    }
+    #flip-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
 
-      #flip-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
+    /* Bottom Retro TV Controls */
+    #tv-hud {
+      position: fixed;
+      bottom: 35px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      display: flex;
+      gap: 12px;
+      pointer-events: auto;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #tv-hud.visible { opacity: 1; }
 
-      #result-text {
-        font-size: 14px;
-        min-height: 18px;
-        text-align: center;
-      }
+    .hud-btn {
+      padding: 10px 22px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #1b6b67;
+      color: #f7efd9;
+      box-shadow: 3px 3px 0 #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .hud-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #241a14;
+    }
 
-      /* Video panel */
-      #video-panel {
-        position: absolute;
-        inset: 0;
-        display: none;
-        flex-direction: column;
-        background: rgba(0,0,0,0.9);
-        z-index: 30;
-      }
+    #ar-error-toast {
+      position: fixed;
+      bottom: 26px;
+      left: 50%;
+      z-index: 110;
+      display: none;
+      max-width: 86vw;
+      padding: 12px 18px;
+      border-radius: 14px;
+      transform: translateX(-50%);
+      background: rgba(20, 10, 8, 0.94);
+      color: #f7efd9;
+      font-family: "Fredoka", sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: center;
+    }
+    #ar-error-toast.visible { display: block; }
 
-      #video-panel.active {
-        display: flex;
-      }
+    #ambient-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 44;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .ambient-dot {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #1b6b67;
+      opacity: 0;
+    }
 
-      #video-container {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
+    #brand-watermark {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 42;
+      pointer-events: none;
+      background: transparent;
+      color: #f7efd9;
+      font-family: "Fredoka", sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55), 0 0 6px rgba(0, 0, 0, 0.35);
+      opacity: 0.92;
+    }
+  </style>
+</head>
 
-      #ar-video {
-        max-width: 100%;
-        max-height: 80vh;
-        border-radius: 8px;
-      }
+<body>
+  <div id="entry-screen">
+    <div id="entry-sunburst"></div>
+    <h1 id="entry-title">90's MACHINE</h1>
+    <div id="entry-subtitle">Touch the Past, Feel the Memory</div>
+    <p id="entry-hint">Point your camera at a target image, then tap below to begin.</p>
+    <button id="entry-btn" type="button">Tap to Begin</button>
+  </div>
 
-      #video-controls {
-        padding: 12px 16px 24px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
+  <div id="scan-hud">
+    <div id="scan-frame">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+      <div id="scan-hint">Point camera at TV or Coin</div>
+    </div>
+  </div>
 
-      #close-video-btn {
-        padding: 8px 14px;
-        border: none;
-        border-radius: 6px;
-        background: #d63031;
-        color: #fff;
-        font-size: 14px;
-        cursor: pointer;
-      }
+  <!-- Bottom Coin Game Controls -->
+  <div id="game-hud">
+    <div id="scoreboard">
+      <div>YOU: <span id="player-score">0</span></div>
+      <div>VS</div>
+      <div>AI: <span id="ai-score">0</span></div>
+    </div>
+    <div id="game-status">Pick HEADS or TAILS to play!</div>
+    
+    <div id="choice-container">
+      <button id="choose-heads" class="choice-btn selected" type="button">HEADS</button>
+      <button id="choose-tails" class="choice-btn" type="button">TAILS</button>
+    </div>
 
-      #unmute-btn {
-        padding: 8px 14px;
-        border: none;
-        border-radius: 6px;
-        background: #0984e3;
-        color: #fff;
-        font-size: 14px;
-        cursor: pointer;
-      }
-    </style>
-  </head>
+    <button id="flip-btn" type="button">FLIP COIN</button>
+  </div>
 
-  <body>
-    <!-- AR Scene (MindAR + A-Frame) -->
-    <div id="ar-container">
-      <a-scene
-        id="ar-scene"
-        mindar-image="
-          imageTargetSrc: ./targets.mind;
-          autoStart: false;
-          uiScanning: no;
-          uiLoading: no;
-          uiError: no;
-        "
-        color-space="sRGB"
-        renderer="colorManagement: true, physicallyCorrectLights"
-        vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false"
-        embedded
+  <!-- Bottom Retro TV Controls -->
+  <div id="tv-hud">
+    <button id="play-tv-btn" class="hud-btn" type="button">Play Video</button>
+    <button id="mute-tv-btn" class="hud-btn" type="button">Unmute</button>
+  </div>
+
+  <div id="ambient-layer"></div>
+  <div id="ar-error-toast"></div>
+  <div id="brand-watermark">90&#8217;s Cafe, Khammam</div>
+
+  <a-scene
+    id="ar-scene"
+    mindar-image="
+      imageTargetSrc: ./targets.mind;
+      uiLoading: no;
+      uiScanning: no;
+      uiError: no;
+      autoStart: false;
+    "
+    color-space="sRGB"
+    renderer="
+      alpha: true;
+      antialias: true;
+      colorManagement: true;
+      physicallyCorrectLights: true;
+    "
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    embedded
+  >
+    <a-assets>
+      <a-asset-item id="tv-model" src="GLB/retrotv.glb"></a-asset-item>
+      <a-asset-item id="coin-model" src="GLB/coin.glb"></a-asset-item>
+
+      <video
+        id="tv-video"
+        src="video/TV/tvglitch.mp4"
+        preload="auto"
+        loop
+        crossorigin="anonymous"
+        webkit-playsinline
+        playsinline
+        muted
+      ></video>
+
+      <audio id="tv-audio" src="video/TV/tvglitchaudio.mp3" preload="auto" loop></audio>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false">
+      <a-entity cursor="rayOrigin: mouse" raycaster="objects: [gltf-model]"></a-entity>
+    </a-camera>
+
+    <!-- Target Index 0: Retro TV -->
+    <a-entity id="target-tv" mindar-image-target="targetIndex: 0">
+      <a-entity 
+        id="model-entity-tv" 
+        gltf-model="#tv-model" 
+        rotation="0 0 0" 
+        position="0 -0.2 0" 
+        scale="0.35 0.35 0.35"
       >
-        <a-camera
-          position="0 0 0"
-          look-controls="enabled: false"
-          cursor="fuse: false"
-          raycaster="objects: .clickable"
-        ></a-camera>
+        <a-plane
+          id="tv-screen-plane"
+          src="#tv-video"
+          position="0 0.28 0.08"
+          width="0.82"
+          height="0.62"
+          material="shader: flat; src: #tv-video"
+        ></a-plane>
+      </a-entity>
+    </a-entity>
 
-        <!-- TV target: targetIndex 0 -->
-        <a-entity id="tv-target" mindar-image-target="targetIndex: 0">
-          <!-- Example: simple 3D object on TV target -->
-          <a-box
-            position="0 0 0"
-            rotation="0 0 0"
-            scale="0.5 0.5 0.5"
-            color="#6c5ce7"
-            opacity="0.9"
-          ></a-box>
-        </a-entity>
+    <!-- Target Index 1: Coin Flip Game -->
+    <a-entity id="target-coin" mindar-image-target="targetIndex: 1">
+      <a-entity 
+        id="model-entity-coin" 
+        gltf-model="#coin-model" 
+        rotation="0 0 0" 
+        position="0 -0.2 0" 
+        scale="0.65 0.65 0.65"
+      ></a-entity>
+    </a-entity>
+  </a-scene>
 
-        <!-- Coin target: targetIndex 1 -->
-        <a-entity id="coin-target" mindar-image-target="targetIndex: 1">
-          <!-- Example: simple 3D object on Coin target -->
-          <a-sphere
-            position="0 0 0"
-            radius="0.25"
-            color="#00b894"
-            opacity="0.9"
-          ></a-sphere>
-        </a-entity>
-      </a-scene>
-    </div>
+  <script>
+    const sceneEl = document.querySelector("#ar-scene");
+    const entryScreen = document.querySelector("#entry-screen");
+    const entryBtn = document.querySelector("#entry-btn");
+    const scanHud = document.querySelector("#scan-hud");
+    
+    // Coin HUD Elements
+    const gameHud = document.querySelector("#game-hud");
+    const gameStatus = document.querySelector("#game-status");
+    const playerScoreEl = document.querySelector("#player-score");
+    const aiScoreEl = document.querySelector("#ai-score");
+    const chooseHeadsBtn = document.querySelector("#choose-heads");
+    const chooseTailsBtn = document.querySelector("#choose-tails");
+    const flipBtn = document.querySelector("#flip-btn");
 
-    <!-- UI Layer -->
-    <div id="ui-layer">
-      <!-- Top bar -->
-      <div id="top-bar">
-        <h1>90's MACHINE</h1>
-        <p>Touch the Past, Feel the Memory</p>
-        <p style="margin-top: 6px; font-size: 12px; opacity: 0.7">
-          Point camera at TV or Coin, then tap “Tap to Begin”.
-        </p>
-      </div>
+    // TV HUD Elements
+    const tvHud = document.querySelector("#tv-hud");
+    const playTvBtn = document.querySelector("#play-tv-btn");
+    const muteTvBtn = document.querySelector("#mute-tv-btn");
+    const tvVideo = document.querySelector("#tv-video");
+    const tvAudio = document.querySelector("#tv-audio");
 
-      <!-- Start screen -->
-      <div id="start-screen">
-        <h1>90's MACHINE</h1>
-        <p>Touch the Past, Feel the Memory</p>
-        <p style="margin-top: 12px">
-          Point your camera at a target image, then tap below to begin.
-        </p>
-        <button id="start-button">Tap to Begin</button>
-        <p style="margin-top: 16px; font-size: 12px; opacity: 0.7">
-          Point camera at TV or Coin
-        </p>
-      </div>
+    const errorToast = document.querySelector("#ar-error-toast");
+    const ambientLayer = document.querySelector("#ambient-layer");
 
-      <!-- Game panel -->
-      <div id="game-panel">
-        <div id="score-row">
-          <span>YOU: <span id="user-score">0</span></span>
-          <span>VS</span>
-          <span>AI: <span id="ai-score">0</span></span>
-        </div>
+    // Model Scales
+    const COIN_SCALE = 0.65;
+    const TV_SCALE = 0.35;
 
-        <div id="coin-controls">
-          <div id="choice-row">
-            <button class="choice-btn" id="heads-btn">HEADS</button>
-            <button class="choice-btn" id="tails-btn">TAILS</button>
-          </div>
-          <button id="flip-btn" disabled>FLIP COIN</button>
-          <div id="result-text"></div>
-        </div>
+    const targetCoin = document.querySelector("#target-coin");
+    const modelCoin = document.querySelector("#model-entity-coin");
+    const targetTv = document.querySelector("#target-tv");
+    const modelTv = document.querySelector("#model-entity-tv");
 
-        <button id="open-video-btn" style="margin-top: 8px; padding: 10px 16px; border: none; border-radius: 8px; background: #fdcb6e; color: #000; font-size: 14px; cursor: pointer;">
-          Play Video
-        </button>
-      </div>
-    </div>
+    let hasStartedAR = false;
+    let isCoinActive = false;
+    let isTvActive = false;
+    let isFlipping = false;
+    let activeTimeline = null;
 
-    <!-- Video Panel -->
-    <div id="video-panel">
-      <div id="video-container">
-        <video id="ar-video" controls>
-          <!-- Replace with your video URL -->
-          <source src="./90s-cafe.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-      </div>
-      <div id="video-controls">
-        <button id="close-video-btn">Close</button>
-        <button id="unmute-btn">Unmute</button>
-      </div>
-    </div>
+    // Game State
+    let playerScore = 0;
+    let aiScore = 0;
+    let selectedChoice = "HEADS";
 
-    <script>
-      // --- AR STARTUP ---
-      const scene = document.querySelector("#ar-scene");
-      const startButton = document.querySelector("#start-button");
-      const startScreen = document.querySelector("#start-screen");
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return audioCtx;
+    }
 
-      startButton.addEventListener("click", async () => {
-        try {
-          startButton.disabled = true;
-          startButton.textContent = "Starting camera...";
+    function playTone({ freq = 880, endFreq = null, duration = 0.2, type = "triangle", volume = 0.25 }) {
+      try {
+        const ctx = getAudioCtx();
+        if (ctx.state === "suspended") ctx.resume();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-          const arSystem = scene.systems["mindar-image-system"];
-          if (!arSystem) {
-            throw new Error("MindAR image system was not found.");
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(freq, ctx.currentTime);
+        if (endFreq) oscillator.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + duration * 0.6);
+
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(volume, ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        oscillator.start();
+        oscillator.stop(ctx.currentTime + duration + 0.05);
+      } catch (e) {
+        console.warn("WebAudio playback error:", e);
+      }
+    }
+
+    const playTapSound = () => playTone({ freq: 420, endFreq: 620, duration: 0.15, type: "sine", volume: 0.2 });
+    const playWinSound = () => playTone({ freq: 520, endFreq: 1040, duration: 0.35, type: "triangle", volume: 0.3 });
+    const playLoseSound = () => playTone({ freq: 400, endFreq: 200, duration: 0.4, type: "sawtooth", volume: 0.2 });
+    const playFlipSound = () => playTone({ freq: 300, endFreq: 900, duration: 0.4, type: "sawtooth", volume: 0.15 });
+
+    gsap.set("#entry-title, #entry-subtitle, #entry-hint, #entry-btn", { opacity: 0 });
+    gsap.set("#entry-title", { scale: 0.7 });
+    gsap.to("#entry-sunburst", { rotate: 360, duration: 50, repeat: -1, ease: "none" });
+
+    gsap.timeline()
+      .to("#entry-title", { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.6)" }, 0.1)
+      .to("#entry-subtitle", { opacity: 1, duration: 0.4 }, 0.4)
+      .to("#entry-hint", { opacity: 1, duration: 0.4 }, 0.6)
+      .to("#entry-btn", { opacity: 1, duration: 0.4 }, 0.75);
+
+    sceneEl.addEventListener("arReady", () => {
+      errorToast.classList.remove("visible");
+    });
+
+    sceneEl.addEventListener("arError", (event) => {
+      console.error("90's MACHINE: MindAR camera error:", event.detail);
+      errorToast.textContent = "Camera could not start. Ensure camera permission is granted and running via HTTPS.";
+      errorToast.classList.add("visible");
+    });
+
+    entryBtn.addEventListener("click", async () => {
+      if (entryBtn.disabled) return;
+
+      try {
+        const ctx = getAudioCtx();
+        if (ctx.state === "suspended") await ctx.resume();
+        playTapSound();
+
+        // Unlock media elements for mobile browsers
+        tvVideo.play().then(() => tvVideo.pause()).catch(() => {});
+        tvAudio.play().then(() => tvAudio.pause()).catch(() => {});
+
+        if (!hasStartedAR) {
+          entryBtn.disabled = true;
+          entryBtn.textContent = "Starting camera…";
+
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            const primingStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            primingStream.getTracks().forEach((track) => track.stop());
           }
 
-          await arSystem.start();
+          const mindarSystem = sceneEl.systems["mindar-image-system"];
+          if (mindarSystem) {
+            await mindarSystem.start();
+            hasStartedAR = true;
+          }
+        }
 
-          // Hide start screen once camera is running
-          startScreen.style.display = "none";
-
-          // Extra safety: ensure video element is visible
-          setTimeout(() => {
-            const cameraVideo = document.querySelector("#ar-scene video");
-            if (cameraVideo) {
-              cameraVideo.style.display = "block";
-              cameraVideo.style.visibility = "visible";
-              cameraVideo.style.opacity = "1";
+        gsap.to("#entry-screen", {
+          opacity: 0,
+          scale: 1.05,
+          duration: 0.4,
+          ease: "power1.in",
+          onComplete: () => {
+            entryScreen.classList.add("hidden");
+            if (!isCoinActive && !isTvActive) {
+              scanHud.classList.add("visible");
+              startAmbientParticles();
             }
-          }, 500);
-        } catch (error) {
-          console.error("Unable to start AR:", error);
-          startButton.disabled = false;
-          startButton.textContent = "Tap to Begin";
-          alert(
-            "Camera could not start. Please allow camera permission and open this page using HTTPS or localhost."
+          }
+        });
+      } catch (error) {
+        console.error("90's MACHINE: Start error:", error);
+        errorToast.textContent = "Could not open camera. Allow camera permissions and reload.";
+        errorToast.classList.add("visible");
+        entryBtn.disabled = false;
+        entryBtn.textContent = "Tap to Begin";
+      }
+    });
+
+    /* Side Selection Handlers */
+    chooseHeadsBtn.addEventListener("click", () => {
+      if (isFlipping) return;
+      playTapSound();
+      selectedChoice = "HEADS";
+      chooseHeadsBtn.classList.add("selected");
+      chooseTailsBtn.classList.remove("selected");
+    });
+
+    chooseTailsBtn.addEventListener("click", () => {
+      if (isFlipping) return;
+      playTapSound();
+      selectedChoice = "TAILS";
+      chooseTailsBtn.classList.add("selected");
+      chooseHeadsBtn.classList.remove("selected");
+    });
+
+    /* Game State Reset */
+    function resetGameState() {
+      if (activeTimeline) activeTimeline.kill();
+      if (modelCoin && modelCoin.object3D) {
+        gsap.killTweensOf(modelCoin.object3D.position);
+        gsap.killTweensOf(modelCoin.object3D.rotation);
+        modelCoin.object3D.position.set(0, -0.2, 0);
+        modelCoin.object3D.rotation.set(0, 0, 0);
+      }
+      isFlipping = false;
+      flipBtn.disabled = false;
+      flipBtn.textContent = "FLIP COIN";
+      gameStatus.textContent = `You selected ${selectedChoice}!`;
+    }
+
+    /* Interactive Coin Toss with Vertical Spin */
+    function flipCoin() {
+      if (isFlipping || !isCoinActive || !modelCoin.object3D) return;
+      
+      if (activeTimeline) activeTimeline.kill();
+      isFlipping = true;
+      flipBtn.disabled = true;
+
+      gameStatus.textContent = "FLIPPING...";
+      playFlipSound();
+
+      const isHeads = Math.random() < 0.5;
+      const resultText = isHeads ? "HEADS" : "TAILS";
+      
+      // Rotate 8 full turns + half turn for Tails
+      const extraSpins = 8 * Math.PI;
+      const finalX = isHeads ? extraSpins : extraSpins + Math.PI;
+
+      const obj3D = modelCoin.object3D;
+      obj3D.position.set(0, -0.2, 0);
+      obj3D.rotation.set(0, 0, 0);
+
+      activeTimeline = gsap.timeline({
+        onComplete: () => {
+          isFlipping = false;
+          flipBtn.disabled = false;
+          flipBtn.textContent = "PLAY AGAIN";
+
+          if (selectedChoice === resultText) {
+            playerScore++;
+            playerScoreEl.textContent = playerScore;
+            gameStatus.textContent = `It's ${resultText}! YOU WIN THIS ROUND! 🎉`;
+            playWinSound();
+          } else {
+            aiScore++;
+            aiScoreEl.textContent = aiScore;
+            gameStatus.textContent = `It's ${resultText}! AI WINS THIS ROUND! 🤖`;
+            playLoseSound();
+          }
+        }
+      })
+      .to(obj3D.position, { y: 0.35, duration: 0.5, ease: "power2.out" }, 0)
+      .to(obj3D.rotation, { x: finalX, y: Math.PI * 2, duration: 1.0, ease: "power1.inOut" }, 0)
+      .to(obj3D.position, { y: -0.2, duration: 0.5, ease: "bounce.out" }, 0.5);
+    }
+
+    flipBtn.addEventListener("click", flipCoin);
+    modelCoin.addEventListener("click", flipCoin);
+
+    /* Retro TV Controls */
+    playTvBtn.addEventListener("click", () => {
+      if (tvVideo.paused) {
+        tvVideo.play();
+        tvAudio.play();
+        playTvBtn.textContent = "Pause Video";
+      } else {
+        tvVideo.pause();
+        tvAudio.pause();
+        playTvBtn.textContent = "Play Video";
+      }
+    });
+
+    muteTvBtn.addEventListener("click", () => {
+      tvVideo.muted = !tvVideo.muted;
+      tvAudio.muted = !tvAudio.muted;
+      muteTvBtn.textContent = tvVideo.muted ? "Unmute" : "Mute";
+    });
+
+    /* Target Handlers - Coin */
+    targetCoin.addEventListener("targetFound", () => {
+      isCoinActive = true;
+      scanHud.classList.remove("visible");
+      gameHud.classList.add("visible");
+      resetGameState();
+      stopAmbientParticles();
+      playWinSound();
+      revealModel(modelCoin, COIN_SCALE);
+    });
+
+    targetCoin.addEventListener("targetLost", () => {
+      isCoinActive = false;
+      gameHud.classList.remove("visible");
+      resetGameState();
+      hideModel(modelCoin);
+
+      if (!isTvActive && entryScreen.classList.contains("hidden")) {
+        scanHud.classList.add("visible");
+        startAmbientParticles();
+      }
+    });
+
+    /* Target Handlers - Retro TV */
+    targetTv.addEventListener("targetFound", () => {
+      isTvActive = true;
+      scanHud.classList.remove("visible");
+      tvHud.classList.add("visible");
+      stopAmbientParticles();
+      playWinSound();
+      revealModel(modelTv, TV_SCALE);
+
+      // Force refresh plane material texture for WebGL canvas
+      const plane = document.querySelector("#tv-screen-plane");
+      if (plane && plane.components.material) {
+        plane.components.material.material.map.needsUpdate = true;
+      }
+
+      tvVideo.play().catch(e => console.log("Video playback restricted:", e));
+      tvAudio.play().catch(e => console.log("Audio playback restricted:", e));
+      playTvBtn.textContent = "Pause Video";
+    });
+
+    targetTv.addEventListener("targetLost", () => {
+      isTvActive = false;
+      tvHud.classList.remove("visible");
+      hideModel(modelTv);
+      tvVideo.pause();
+      tvAudio.pause();
+      tvVideo.currentTime = 0;
+
+      if (!isCoinActive && entryScreen.classList.contains("hidden")) {
+        scanHud.classList.add("visible");
+        startAmbientParticles();
+      }
+    });
+
+    function revealModel(entity, targetScale) {
+      if (!entity) return;
+      const animate = () => {
+        if (entity.object3D) {
+          gsap.killTweensOf(entity.object3D.scale);
+          entity.object3D.rotation.set(0, 0, 0);
+          gsap.fromTo(
+            entity.object3D.scale,
+            { x: 0.001, y: 0.001, z: 0.001 },
+            { x: targetScale, y: targetScale, z: targetScale, duration: 0.5, ease: "elastic.out(1, 0.55)" }
           );
         }
-      });
+      };
 
-      // --- TARGET DEBUGGING (console logs) ---
-      const tvTarget = document.querySelector("#tv-target");
-      const coinTarget = document.querySelector("#coin-target");
+      if (entity.hasLoaded) animate();
+      else entity.addEventListener("model-loaded", animate, { once: true });
+    }
 
-      tvTarget.addEventListener("targetFound", () => {
-        console.log("TV target found (targetIndex 0)");
-      });
-      tvTarget.addEventListener("targetLost", () => {
-        console.log("TV target lost");
-      });
+    function hideModel(entity) {
+      if (entity && entity.object3D) {
+        gsap.killTweensOf(entity.object3D.scale);
+        gsap.to(entity.object3D.scale, {
+          x: 0.001, y: 0.001, z: 0.001,
+          duration: 0.2,
+          ease: "power1.in"
+        });
+      }
+    }
 
-      coinTarget.addEventListener("targetFound", () => {
-        console.log("Coin target found (targetIndex 1)");
-      });
-      coinTarget.addEventListener("targetLost", () => {
-        console.log("Coin target lost");
-      });
+    let ambientTimer = null;
 
-      // --- COIN GAME LOGIC ---
-      let userChoice = null; // "heads" or "tails"
-      let userScore = 0;
-      let aiScore = 0;
+    function spawnAmbientDot() {
+      const dot = document.createElement("div");
+      dot.className = "ambient-dot";
 
-      const headsBtn = document.querySelector("#heads-btn");
-      const tailsBtn = document.querySelector("#tails-btn");
-      const flipBtn = document.querySelector("#flip-btn");
-      const resultText = document.querySelector("#result-text");
-      const userScoreEl = document.querySelector("#user-score");
-      const aiScoreEl = document.querySelector("#ai-score");
+      const x = window.innerWidth * (0.3 + Math.random() * 0.4);
+      const startY = window.innerHeight * 0.75;
+      dot.style.left = `${x}px`;
+      dot.style.top = `${startY}px`;
+      ambientLayer.appendChild(dot);
 
-      headsBtn.addEventListener("click", () => {
-        userChoice = "heads";
-        headsBtn.classList.add("active");
-        tailsBtn.classList.remove("active");
-        flipBtn.disabled = false;
-        resultText.textContent = "You chose HEADS";
-      });
+      gsap.timeline({ onComplete: () => dot.remove() })
+        .to(dot, { opacity: 0.6, duration: 0.4 }, 0)
+        .to(dot, { y: -180 - Math.random() * 100, x: `+=${(Math.random() - 0.5) * 60}`, duration: 2.4, ease: "power1.out" }, 0)
+        .to(dot, { opacity: 0, duration: 0.5 }, 1.9);
+    }
 
-      tailsBtn.addEventListener("click", () => {
-        userChoice = "tails";
-        tailsBtn.classList.add("active");
-        headsBtn.classList.remove("active");
-        flipBtn.disabled = false;
-        resultText.textContent = "You chose TAILS";
-      });
+    function startAmbientParticles() {
+      if (ambientTimer) return;
+      spawnAmbientDot();
+      ambientTimer = window.setInterval(spawnAmbientDot, 700);
+    }
 
-      flipBtn.addEventListener("click", () => {
-        if (!userChoice) return;
+    function stopAmbientParticles() {
+      if (ambientTimer) {
+        window.clearInterval(ambientTimer);
+        ambientTimer = null;
+      }
+    }
 
-        const outcomes = ["heads", "tails"];
-        const result = outcomes[Math.floor(Math.random() * outcomes.length)];
-
-        if (result === userChoice) {
-          userScore++;
-          resultText.textContent = `Result: ${result.toUpperCase()}. You win this round!`;
-        } else {
-          aiScore++;
-          resultText.textContent = `Result: ${result.toUpperCase()}. AI wins this round.`;
-        }
-
-        userScoreEl.textContent = userScore;
-        aiScoreEl.textContent = aiScore;
-
-        flipBtn.disabled = true;
-        headsBtn.classList.remove("active");
-        tailsBtn.classList.remove("active");
-        userChoice = null;
-      });
-
-      // --- VIDEO PANEL ---
-      const videoPanel = document.querySelector("#video-panel");
-      const arVideo = document.querySelector("#ar-video");
-      const openVideoBtn = document.querySelector("#open-video-btn");
-      const closeVideoBtn = document.querySelector("#close-video-btn");
-      const unmuteBtn = document.querySelector("#unmute-btn");
-
-      openVideoBtn.addEventListener("click", () => {
-        videoPanel.classList.add("active");
-        arVideo.currentTime = 0;
-        arVideo.play().catch(() => {});
-      });
-
-      closeVideoBtn.addEventListener("click", () => {
-        videoPanel.classList.remove("active");
-        arVideo.pause();
-      });
-
-      unmuteBtn.addEventListener("click", () => {
-        arVideo.muted = false;
-      });
-
-      // Ensure video starts muted (for autoplay policies)
-      arVideo.muted = true;
-    </script>
-  </body>
+    sceneEl.addEventListener("loaded", () => {
+      if (modelCoin) modelCoin.setAttribute("scale", "0.001 0.001 0.001");
+      if (modelTv) modelTv.setAttribute("scale", "0.001 0.001 0.001");
+    });
+  </script>
+</body>
 </html>
