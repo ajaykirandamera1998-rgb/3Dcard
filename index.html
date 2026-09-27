@@ -248,6 +248,64 @@
       cursor: not-allowed;
     }
 
+    #scoreboard {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 16px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #f7efd9;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+      font-family: "Baloo 2", sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      color: #241a14;
+    }
+    #scoreboard .vs {
+      font-family: "Fredoka", sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0.6;
+    }
+    #scoreboard .you-score { color: #1b6b67; }
+    #scoreboard .ai-score { color: #7a2426; }
+
+    #choice-prompt {
+      font-family: "Fredoka", sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #241a14;
+      background: rgba(247, 239, 217, 0.9);
+      padding: 4px 14px;
+      border-radius: 999px;
+    }
+
+    #choice-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .choice-btn {
+      padding: 8px 22px;
+      border: 3px solid #241a14;
+      border-radius: 999px;
+      background: #f7efd9;
+      color: #241a14;
+      font-family: "Fredoka", sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 #241a14;
+    }
+    .choice-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 0 0 0 #241a14;
+    }
+    .choice-btn.selected {
+      background: #e8a62e;
+    }
+
     #ar-error-toast {
       position: fixed;
       bottom: 26px;
@@ -321,6 +379,16 @@
   </div>
 
   <div id="game-hud">
+    <div id="scoreboard">
+      <span>YOU: <span class="you-score" id="you-score">0</span></span>
+      <span class="vs">VS</span>
+      <span>AI: <span class="ai-score" id="ai-score">0</span></span>
+    </div>
+    <div id="choice-prompt">Pick HEADS or TAILS to play!</div>
+    <div id="choice-row">
+      <button class="choice-btn" id="choice-heads" type="button">HEADS</button>
+      <button class="choice-btn" id="choice-tails" type="button">TAILS</button>
+    </div>
     <div id="game-status">TAP TO FLIP</div>
     <button id="flip-btn" type="button">FLIP COIN</button>
   </div>
@@ -379,6 +447,11 @@
     const flipBtn = document.querySelector("#flip-btn");
     const errorToast = document.querySelector("#ar-error-toast");
     const ambientLayer = document.querySelector("#ambient-layer");
+    const youScoreEl = document.querySelector("#you-score");
+    const aiScoreEl = document.querySelector("#ai-score");
+    const choicePrompt = document.querySelector("#choice-prompt");
+    const choiceHeadsBtn = document.querySelector("#choice-heads");
+    const choiceTailsBtn = document.querySelector("#choice-tails");
 
     const TARGET_SCALE = 0.3;
     const targetEntity = document.querySelector("#target-coin");
@@ -388,6 +461,9 @@
     let isTargetActive = false;
     let isFlipping = false;
     let activeTimeline = null;
+    let playerChoice = null; // "heads" | "tails" | null
+    let youScore = 0;
+    let aiScore = 0;
 
     let audioCtx = null;
     function getAudioCtx() {
@@ -484,6 +560,26 @@
       }
     });
 
+    function updateScoreboard() {
+      youScoreEl.textContent = youScore;
+      aiScoreEl.textContent = aiScore;
+    }
+
+    function selectChoice(choice) {
+      if (isFlipping) return; // can't change pick mid-flip
+      playerChoice = choice;
+
+      choiceHeadsBtn.classList.toggle("selected", choice === "heads");
+      choiceTailsBtn.classList.toggle("selected", choice === "tails");
+
+      choicePrompt.style.display = "none";
+      flipBtn.disabled = false;
+      gameStatus.textContent = `YOU PICKED ${choice.toUpperCase()}`;
+    }
+
+    choiceHeadsBtn.addEventListener("click", () => selectChoice("heads"));
+    choiceTailsBtn.addEventListener("click", () => selectChoice("tails"));
+
     function resetGameState() {
       if (activeTimeline) activeTimeline.kill();
       if (modelEntity && modelEntity.object3D) {
@@ -493,22 +589,33 @@
         modelEntity.object3D.rotation.set(0, 0, 0);
       }
       isFlipping = false;
-      flipBtn.disabled = false;
+      playerChoice = null;
+
+      choiceHeadsBtn.classList.remove("selected");
+      choiceTailsBtn.classList.remove("selected");
+      choicePrompt.style.display = "block";
+
+      flipBtn.disabled = true; // must pick a side before flipping
       flipBtn.textContent = "FLIP COIN";
-      gameStatus.textContent = "TAP TO FLIP";
+      gameStatus.textContent = "PICK A SIDE FIRST";
     }
 
     function flipCoin() {
-      if (isFlipping || !isTargetActive || !modelEntity.object3D) return;
-      
+      if (isFlipping || !isTargetActive || !modelEntity.object3D || !playerChoice) return;
+
       if (activeTimeline) activeTimeline.kill();
       isFlipping = true;
       flipBtn.disabled = true;
+      choiceHeadsBtn.disabled = true;
+      choiceTailsBtn.disabled = true;
 
       gameStatus.textContent = "FLIPPING...";
       playFlipSound();
 
       const isHeads = Math.random() < 0.5;
+      const resultLabel = isHeads ? "heads" : "tails";
+      const playerWon = playerChoice === resultLabel;
+
       const extraSpins = 4 * (Math.PI * 2);
       const finalY = isHeads ? extraSpins : extraSpins + Math.PI;
 
@@ -518,11 +625,35 @@
 
       activeTimeline = gsap.timeline({
         onComplete: () => {
+          if (playerWon) {
+            youScore += 1;
+            gameStatus.textContent = `IT'S ${resultLabel.toUpperCase()}! YOU WIN!`;
+            playLockOnChime();
+          } else {
+            aiScore += 1;
+            gameStatus.textContent = `IT'S ${resultLabel.toUpperCase()}! AI WINS!`;
+            playFlipSound();
+          }
+          updateScoreboard();
+
           isFlipping = false;
-          flipBtn.disabled = false;
+          choiceHeadsBtn.disabled = false;
+          choiceTailsBtn.disabled = false;
+
+          // Require a fresh pick before the next flip -- keeps the
+          // round structure clear (pick -> flip -> result -> pick again)
+          // without resetting the running score.
+          playerChoice = null;
+          choiceHeadsBtn.classList.remove("selected");
+          choiceTailsBtn.classList.remove("selected");
+          flipBtn.disabled = true;
           flipBtn.textContent = "FLIP AGAIN";
-          gameStatus.textContent = isHeads ? "HEADS!" : "TAILS!";
-          playLockOnChime();
+
+          setTimeout(() => {
+            if (!isFlipping && !playerChoice) {
+              choicePrompt.style.display = "block";
+            }
+          }, 1400);
         }
       })
       .to(obj3D.position, { y: 0.35, duration: 0.5, ease: "power2.out" }, 0)
