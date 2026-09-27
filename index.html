@@ -199,7 +199,7 @@
 
     #game-hud {
       position: fixed;
-      top: 35px;
+      bottom: 35px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 80;
@@ -287,13 +287,13 @@
     }
 
     .choice-btn {
-      padding: 8px 22px;
-      border: 3px solid #241a14;
+      padding: 5px 16px;
+      border: 2px solid #241a14;
       border-radius: 999px;
       background: #f7efd9;
       color: #241a14;
       font-family: "Fredoka", sans-serif;
-      font-size: 14px;
+      font-size: 11px;
       font-weight: 600;
       cursor: pointer;
       box-shadow: 2px 2px 0 #241a14;
@@ -432,7 +432,7 @@
         gltf-model="#coin-model" 
         rotation="0 0 0" 
         position="0 -0.25 0" 
-        scale="0.3 0.3 0.3"
+        scale="0.5 0.5 0.5"
       ></a-entity>
     </a-entity>
   </a-scene>
@@ -453,7 +453,7 @@
     const choiceHeadsBtn = document.querySelector("#choice-heads");
     const choiceTailsBtn = document.querySelector("#choice-tails");
 
-    const TARGET_SCALE = 0.3;
+    const TARGET_SCALE = 0.5; // bumped up from 0.3 -- coin now appears noticeably bigger
     const targetEntity = document.querySelector("#target-coin");
     const modelEntity = document.querySelector("#model-entity-coin");
 
